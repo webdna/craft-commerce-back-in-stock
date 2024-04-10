@@ -45,6 +45,7 @@ class SendEmailNotification extends BaseJob
      */
     public $template;
 
+
     // Public Methods
     // =========================================================================
 
@@ -55,7 +56,7 @@ class SendEmailNotification extends BaseJob
     {
         $record = BackInStockRecord::findOne($this->backInStockRecordId);
         if ($record) {
-            if (BackInStock::$plugin->backInStockService->sendMail($record, $this->subject, $this->template)) {
+            if (BackInStock::$plugin->backInStockService->sendMail($record, $this->subject, $this->template, $this->confirmation)) {
                 if (!$this->confirmation) {
                     if (BackInStock::$plugin->getSettings()->purgeRequests) {
                         $record->delete();

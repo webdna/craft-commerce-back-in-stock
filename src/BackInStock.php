@@ -23,8 +23,9 @@ use craft\events\PluginEvent;
 use craft\web\UrlManager;
 use craft\events\RegisterUrlRulesEvent;
 use craft\commerce\elements\Variant;
+use craft\events\RegisterEmailMessagesEvent;
 use craft\services\Elements;
-
+use craft\services\SystemMessages;
 use yii\base\Event;
 
 /**
@@ -96,6 +97,26 @@ class BackInStock extends Plugin
                 $this->backInStockService->isBackInStock($variant);
             }
         });
+
+        Event::on(
+            SystemMessages::class,
+            SystemMessages::EVENT_REGISTER_MESSAGES,
+            function(RegisterEmailMessagesEvent $event) {
+                $event->messages[] = [
+                    "key" => "back_in_stock_notification",
+                    "heading" => "When an item is back in stock (Back In Stock Plugin)",
+                    "subject" => BackInStock::$plugin->getSettings()->emailSubject,
+                    "body" => "Hey, The following item is back in stock, {{ variant.description }}",
+                ];
+                $event->messages[] = [
+                    "key" => "back_in_stock_confirmation",
+                    "heading" => "When an you request to be notified about a variant stock (Back In Stock Plugin)",
+                    "subject" => BackInStock::$plugin->getSettings()->confirmationEmailSubject,
+                    "body" => "Hey, You will be notified when {{ variant.description }} becomes available for purchase",
+                ];
+                
+            }
+        );
 
     }
 

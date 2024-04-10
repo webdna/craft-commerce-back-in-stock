@@ -21,7 +21,7 @@ use craft\base\Component;
 use craft\helpers\Json;
 use craft\mail\Message;
 use craft\commerce\elements\Variant;
-
+use craft\helpers\App;
 
 /**
  * @author    Myles Beardsmore
@@ -104,7 +104,7 @@ class BackInStockService extends Component
                         'confirmation' => true,
                         'backInStockRecordId' => $newRecord->id,
                         'subject' => $subject,
-                        'template' => $template
+                        'template' => $template,
                     ]));
                 }
 
@@ -116,7 +116,7 @@ class BackInStockService extends Component
     }
 
 
-    public function sendMail($record, $subject, $templatePath = null): bool
+    public function sendMail($record, $subject, $templatePath = null, $isConfirmation=false): bool
     {
         // settings/defaults
         $view = Craft::$app->getView();
@@ -176,15 +176,21 @@ class BackInStockService extends Component
         $settings = Craft::$app->projectConfig->get('email');
 
         // build the email
-        $newEmail = new Message();
-        $newEmail->setFrom([Craft::parseEnv($settings['fromEmail']) => Craft::parseEnv($settings['fromName'])]);
-        $newEmail->setTo($record->email);
-        $newEmail->setSubject($subject);
-        $newEmail->setHtmlBody($view->renderTemplate($templatePath, $renderVariables));
+        // $newEmail = new Message();
+        // ->composeFromKey('account_activation', ['link' => Template::raw($url)])
+        // $newEmail->setFrom([Craft::parseEnv($settings['fromEmail']) => Craft::parseEnv($settings['fromName'])]);
+        // $newEmail->setTo($record->email);
+        // $newEmail->setSubject($subject);
+        // $newEmail->setHtmlBody($view->renderTemplate($templatePath, $renderVariables));
 
         // attempt to send
         try {
-            if (!Craft::$app->getMailer()->send($newEmail)) {
+            if (!Craft::$app->getMailer()
+                ->composeFromKey($isConfirmation ? 'back_in_stock_confirmation' : 'back_in_stock_notification', ['variant' => $renderVariables['variant']])
+                ->setFrom([Craft::parseEnv($settings['fromEmail']) => Craft::parseEnv($settings['fromName'])])
+                ->setTo($record->email)
+                ->send()
+            ) {
                 $error = Craft::t('craft-commerce-back-in-stock', 'Back In Stock email “{email}” could not be sent');
                 Craft::error($error, __METHOD__);
                 $view->setTemplateMode($oldTemplateMode);
@@ -195,7 +201,7 @@ class BackInStockService extends Component
                 'error' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
-                'order' => $order->id
+                'variant' => $variant->id
             ]);
             Craft::error($error, __METHOD__);
             $view->setTemplateMode($oldTemplateMode);
